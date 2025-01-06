@@ -28,8 +28,8 @@ def submit(query: str, config: Config) -> str:
     """
     query = handle_caret(query, config)
 
-    query_endpoint = f"{config.backend.endpoint}/infer"
-    payload = {"question": query}
+    query_endpoint = f"{config.backend.endpoint}/v1/query"
+    payload = {"query": query}
 
     try:
         logger.info("Waiting for response from AI...")
