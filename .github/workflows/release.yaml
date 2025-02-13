@@ -1,0 +1,54 @@
+# Build new manpages on every release. To avoid too complicated workflows, we
+# will generate the manpages when we add the label "manpages" in our pull request,
+# indicating that this pull request will be one that will be released.
+
+name: "Release"
+
+on:
+  push:
+    tags: ["*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Generate tarball
+    runs-on: ubuntu-latest
+    steps:
+      - uses: olegtarasov/get-tag@v2.1
+        id: tagName
+        with:
+          tagRegex: "v(.*)"  # Optional. Returns specified group text as tag name. Full tag string is returned if regex is not defined.
+          tagRegexGroup: 1 # Optional. Default is 1.
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - name: Install dependencies
+        run: |
+          # TODO(r0x0d): Refactor this https://issues.redhat.com/browse/RSPEED-339
+          sudo apt update -y
+          sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0 -y
+          make install
+
+      - name: Generate manpages
+        run: |
+          echo "$(poetry env info -p)/bin" >> $GITHUB_PATH
+          SPHINXBUILD=$(poetry env info -p)/bin/sphinx-build make man
+
+      - name: Generate distribution tarball
+        run: |
+           make distribution-tarball
+        env:
+          VERSION: '${{ steps.tagName.outputs.tag }}'
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: command-line-assistant-${{ steps.tagName.outputs.tag }}.tar.gz
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
