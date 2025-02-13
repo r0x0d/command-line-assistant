@@ -29,6 +29,9 @@ SYSTEMD_USER_UNITS := ~/.config/systemd/user
 # Path to local XDG_CONFIG_DIRS to load config file
 XDG_CONFIG_DIRS := $(subst /,\/,$(DATA_DEVELOPMENT_PATH)/config)
 
+PKGNAME := command-line-assistant
+VERSION := 0.2.2
+
 default: help
 
 install-tools: ## Install required utilities/tools
