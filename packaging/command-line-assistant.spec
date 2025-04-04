@@ -10,7 +10,7 @@
 %define modulename %{daemon_binary_name}
 
 Name:           command-line-assistant
-Version:        0.3.1
+Version:        0.3.2
 Release:        1%{?dist}
 Summary:        A simple wrapper to interact with RAG
 
@@ -170,6 +170,9 @@ fi
 %ghost %verify(not md5 size mode mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/%{modulename}
 
 %changelog
+* Fri Apr 04 2025 Rodolfo Olivieri <rolivier@redhat.com> 0.3.2
+- Disable colors in output
+
 * Tue Mar 18 2025 Rodolfo Olivieri <rolivier@redhat.com> 0.3.1
 - Add exception handling for RuntimeError
 - Disallow empty query arguments for query_string and stdin
