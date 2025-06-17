@@ -1,12 +1,15 @@
 """Simplified chat command implementation."""
 
 import argparse
+import json
 import logging
 import platform
 from argparse import Namespace
 from dataclasses import dataclass
 from io import TextIOWrapper
 from typing import Optional
+
+import requests
 
 from command_line_assistant.dbus.exceptions import (
     ChatNotFoundError,
@@ -210,7 +213,8 @@ def chat_command(args: Namespace, context: CommandContext) -> int:
     render = RenderUtils(args.plain)
     dbus = DbusUtils()
 
-    user_id = dbus.user_proxy.GetUserId(context.effective_user_id)
+    # user_id = dbus.user_proxy.GetUserId(context.effective_user_id)
+    user_id = "test"
 
     try:
         # Handle special arguments preprocessing
@@ -382,12 +386,13 @@ def _submit_question(
         plain=plain,
     )
     with spinner_renderer:
-        response = _get_response(dbus, message_input, user_id)
+        response = _get_response_new(dbus, message_input, user_id)
 
     try:
-        dbus.history_proxy.WriteHistory(
-            chat_id, user_id, message_input.message, response
-        )
+        ...
+        # dbus.history_proxy.WriteHistory(
+        #     chat_id, user_id, message_input.message, response
+        # )
     except HistoryNotEnabledError:
         logger.warning(
             "The history is disabled in the configuration file. Skipping the write to the history."
@@ -427,7 +432,7 @@ def _trim_message_size(render: RenderUtils, question: str) -> str:
 
 def _compose_message_input(
     render: RenderUtils, context: CommandContext, input_source: InputSource
-) -> Question:
+):
     """Compose the final message that will be sent to the API.
 
     Args:
@@ -439,6 +444,23 @@ def _compose_message_input(
         Question: The composed message input.
     """
     final_question = _trim_message_size(render, input_source.get_input_source())
+    return {
+        "question": final_question,
+        "context": {
+            "stdin": input_source.stdin,
+            "attachment": {
+                "contents": input_source.attachment,
+                "mimetype": input_source.attachment_mimetype,
+            },
+            "terminal": {"output": input_source.terminal_output},
+            "systeminfo": {
+                "os": context.os_release["name"],
+                "version": context.os_release["version_id"],
+                "arch": platform.machine(),
+                "id": context.os_release["id"],
+            },
+        },
+    }
     message_input = Question(
         message=final_question,
         stdin=StdinInput(stdin=input_source.stdin),
@@ -500,6 +522,27 @@ def _get_response(
     """
     response = dbus.chat_proxy.AskQuestion(user_id, message_input.structure())
     return Response.from_structure(response).message
+
+
+def _get_response_new(
+    dbus: DbusUtils,
+    message_input: Question,
+    user_id: str,
+) -> str:
+    """Get the response from the chat session.
+
+    Args:
+        dbus (DbusUtils): The DbusUtils instance.
+        message_input (Question): The message input.
+        user_id (str): The user ID.
+
+    Returns:
+        str: The response message.
+    """
+    resp = requests.post("http://localhost:8000/api/v1/infer", data=json.dumps(message_input))
+    return resp.json()["data"]["text"]
+    # response = dbus.chat_proxy.AskQuestion(user_id, message_input.structure())
+    # return Response.from_structure(response).message
 
 
 def _list_chats(render: RenderUtils, dbus: DbusUtils, user_id: str) -> int:
@@ -667,11 +710,11 @@ def _single_question(
     message_input = _compose_message_input(render, context, input_source)
 
     try:
-        chat_id = _create_chat_session(dbus, user_id, name, description)
+        # chat_id = _create_chat_session(dbus, user_id, name, description)
         response = _submit_question(
             dbus=dbus,
             user_id=user_id,
-            chat_id=chat_id,
+            chat_id="000000000",
             message_input=message_input,
             plain=args.plain,
         )
