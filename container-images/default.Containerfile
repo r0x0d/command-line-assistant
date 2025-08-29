@@ -8,8 +8,6 @@ WORKDIR /project
 COPY ./pyproject.toml ./uv.lock README.md LICENSE ./
 COPY command_line_assistant/ ./command_line_assistant/
 
-RUN subscription-manager --refresh
-
 # Install Python, pip, and development tools
 RUN dnf install -y --enablerepo=rhel-CRB-latest \
         python3.12 \
