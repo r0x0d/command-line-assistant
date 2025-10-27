@@ -11,6 +11,7 @@ from command_line_assistant.config.schemas.backend import BackendSchema
 from command_line_assistant.config.schemas.database import DatabaseSchema
 from command_line_assistant.config.schemas.history import HistorySchema
 from command_line_assistant.config.schemas.logging import LoggingSchema
+from command_line_assistant.config.schemas.mcp import MCPSchema
 from command_line_assistant.utils.environment import get_xdg_config_path
 
 # tomllib is available in the stdlib after Python3.11. Before that, we import
@@ -45,12 +46,14 @@ class Config:
         history (HistorySchema): Match the `py:HistorySchema` class and their fields
         backend (BackendSchema): Match the `py:BackendSchema` class and their fields
         logging (LoggingSchema): Match the `py:LoggingSchema` class and their fields
+        mcp (MCPSchema): Match the `py:MCPSchema` class and their fields
     """
 
     database: DatabaseSchema = dataclasses.field(default_factory=DatabaseSchema)
     history: HistorySchema = dataclasses.field(default_factory=HistorySchema)
     backend: BackendSchema = dataclasses.field(default_factory=BackendSchema)
     logging: LoggingSchema = dataclasses.field(default_factory=LoggingSchema)
+    mcp: MCPSchema = dataclasses.field(default_factory=MCPSchema)
 
 
 def load_config_file() -> Config:
@@ -79,4 +82,5 @@ def load_config_file() -> Config:
         history=HistorySchema(**config_dict["history"]),
         backend=BackendSchema(**config_dict["backend"]),
         logging=LoggingSchema(**config_dict["logging"]),
+        mcp=MCPSchema(**config_dict.get("mcp", {})),
     )

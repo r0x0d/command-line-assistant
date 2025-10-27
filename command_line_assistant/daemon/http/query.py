@@ -3,10 +3,15 @@
 import logging
 from http import HTTPStatus
 from json.decoder import JSONDecodeError
+from typing import Any, Optional
 
 from requests import RequestException, Response
 
 from command_line_assistant.config import Config
+from command_line_assistant.daemon.http.openai_query import (
+    create_initial_messages,
+    submit_openai,
+)
 from command_line_assistant.daemon.http.session import get_session
 from command_line_assistant.dbus.exceptions import RequestFailedError
 
@@ -54,19 +59,70 @@ ERROR_MESSAGES: dict[int, str] = {
 }
 
 
-def submit(payload: dict, config: Config) -> str:
+def submit(
+    payload: dict, config: Config, tools: Optional[list[dict]] = None
+) -> dict[str, Any]:
     """Submit a query to the backend API.
 
     Args:
         payload: JSON-serializable dictionary containing the query parameters
         config: Configuration object with backend endpoint information
+        tools: Optional list of tool definitions (for OpenAI mode)
 
     Raises:
         RequestFailedError: If the request fails due to network issues,
                            authentication problems, or server errors
 
     Returns:
-        str: The response text from the backend
+        dict: The response from the backend. Format depends on mode:
+            - legacy mode: {"text": str}
+            - openai mode: full OpenAI API response dict
+    """
+    # Route to appropriate backend based on mode
+    if config.backend.mode == "openai":
+        return _submit_openai_mode(payload, config, tools)
+    else:
+        return _submit_legacy_mode(payload, config)
+
+
+def _submit_openai_mode(
+    payload: dict, config: Config, tools: Optional[list[dict]] = None
+) -> dict[str, Any]:
+    """Submit query using OpenAI-compatible API.
+
+    Args:
+        payload: The query payload with question and context
+        config: Configuration object
+        tools: Optional tool definitions
+
+    Returns:
+        dict: Full OpenAI API response
+    """
+    try:
+        # Convert the legacy payload format to OpenAI messages format
+        question = payload.get("question", "")
+        context = payload.get("context", {})
+
+        messages = create_initial_messages(question, context)
+        response = submit_openai(messages, config, tools)
+
+        return response
+    except RequestException as exc:
+        logger.error("Failed to get response from AI: %s", exc)
+        raise RequestFailedError(
+            f"Communication error with the server: {str(exc)}. Please try again in a few minutes."
+        ) from exc
+
+
+def _submit_legacy_mode(payload: dict, config: Config) -> dict[str, Any]:
+    """Submit query using legacy API format.
+
+    Args:
+        payload: JSON-serializable dictionary containing the query parameters
+        config: Configuration object with backend endpoint information
+
+    Returns:
+        dict: Response in format {"text": str}
     """
     query_endpoint = f"{config.backend.endpoint}/infer"
 
@@ -77,7 +133,8 @@ def submit(payload: dict, config: Config) -> str:
         if response.status_code != HTTPStatus.OK:
             _handle_error_response(response)
 
-        return _extract_response_text(response)
+        text = _extract_response_text(response)
+        return {"text": text}
     except RequestException as exc:
         logger.error("Failed to get response from AI: %s", exc)
         raise RequestFailedError(

@@ -39,9 +39,8 @@ def get_session(config: Config) -> Session:
     session.headers["Content-Type"] = "application/json"
 
     retry_adapter = RetryAdapter()
-
     session.mount(config.backend.endpoint, retry_adapter)
-
-    session.cert = (config.backend.auth.cert_file, config.backend.auth.key_file)  # type: ignore
+    #if config.backend.auth.verify_ssl:
+    #    session.cert = (config.backend.auth.cert_file, config.backend.auth.key_file)  # type: ignore
 
     return session

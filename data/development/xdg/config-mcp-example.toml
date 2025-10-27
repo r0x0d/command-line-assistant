@@ -13,7 +13,7 @@
 # History Database settings. By default, sqlite is used.
 [database]
 type = "sqlite"
-connection_string = "/tmp/command-line-assistant/history.db"
+connection_string = "/var/lib/command-line-assistant/history.db"
 
 # History management configuration
 [history]
@@ -22,7 +22,7 @@ enabled = true
 # Backend settings for communicating with the inference server
 [backend]
 # Point to your ramalama server (or any OpenAI-compatible API)
-endpoint = "http://127.0.0.1:8080"
+endpoint = "http://localhost:8080"
 # Use OpenAI-compatible mode for ramalama
 mode = "openai"
 # Specify the model name (must match the model you're serving)
@@ -35,7 +35,6 @@ timeout = 120
 [backend.auth]
 cert_file = "/etc/pki/consumer/cert.pem"
 key_file = "/etc/pki/consumer/key.pem"
-verify_ssl = false
 
 # Logging configuration settings
 [logging]

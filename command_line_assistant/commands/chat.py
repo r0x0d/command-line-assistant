@@ -396,6 +396,7 @@ def _submit_question(
     chat_id: str,
     message_input: Question,
     plain: bool,
+    mcp_enabled: bool = False,
 ) -> str:
     """Submit the question over dbus.
 
@@ -405,12 +406,17 @@ def _submit_question(
         chat_id (str): The chat id.
         message_input (Question): The question.
         plain (bool): Whether to render in plain text.
+        mcp_enabled (bool): Whether MCP is enabled (affects spinner message).
 
     Returns:
         str: The response.
     """
+    spinner_message = "Asking RHEL Lightspeed"
+    if mcp_enabled:
+        spinner_message = "Asking RHEL Lightspeed (MCP tools may be invoked)"
+    
     spinner_renderer = create_spinner_renderer(
-        message="Asking RHEL Lightspeed",
+        message=spinner_message,
         plain=plain,
     )
     with spinner_renderer:
@@ -648,12 +654,17 @@ def _interactive_chat(
 
             input_source.question = question
             message_input = _compose_message_input(render, context, input_source)
+            
+            # Check MCP status for interactive mode too
+            mcp_enabled = _is_mcp_enabled(dbus)
+            
             response = _submit_question(
                 dbus=dbus,
                 user_id=user_id,
                 chat_id=chat_id,
                 message_input=message_input,
                 plain=args.plain,
+                mcp_enabled=mcp_enabled,
             )
             _display_response(response, args.plain)
     except (KeyboardInterrupt, EOFError) as e:
@@ -699,6 +710,9 @@ def _single_question(
     message_input = _compose_message_input(render, context, input_source)
 
     try:
+        # Check if MCP is enabled by trying to get the config info
+        mcp_enabled = _is_mcp_enabled(dbus)
+        
         chat_id = _create_chat_session(dbus, user_id, name, description)
         response = _submit_question(
             dbus=dbus,
@@ -706,6 +720,7 @@ def _single_question(
             chat_id=chat_id,
             message_input=message_input,
             plain=args.plain,
+            mcp_enabled=mcp_enabled,
         )
 
         _display_response(response, args.plain)
@@ -713,6 +728,23 @@ def _single_question(
     except ValueError as e:
         message = f"Failed to get a response from LLM. {str(e)}"
         raise ChatCommandException(message) from e
+
+
+def _is_mcp_enabled(dbus: DbusClient) -> bool:
+    """Check if MCP is enabled in the daemon configuration.
+
+    Args:
+        dbus: The DBus client
+
+    Returns:
+        bool: True if MCP is enabled, False otherwise
+    """
+    try:
+        # Query the daemon to check if MCP is enabled
+        return dbus.chat_proxy.IsMCPEnabled()
+    except Exception as e:
+        logger.debug(f"Failed to check MCP status: {e}")
+        return False
 
 
 def _validate_query_composition(args: Namespace) -> Optional[str]:

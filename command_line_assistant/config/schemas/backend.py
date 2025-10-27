@@ -44,11 +44,15 @@ class BackendSchema:
         proxies (dict[str, str]): Dictionary of proxies to route the request
         auth (Union[dict, AuthSchema]): The authentication information
         timeout (int): HTTP request timeout in seconds
+        mode (str): The backend mode - "legacy" for the old API, "openai" for OpenAI-compatible APIs like ramalama
+        model (str): The model name to use (only for OpenAI-compatible mode)
     """
 
     endpoint: str = "https://0.0.0.0:8080"
     auth: AuthSchema = dataclasses.field(default_factory=AuthSchema)
     timeout: int = 30
+    mode: str = "legacy"
+    model: str = "llama3.2"
 
     proxies: dict[str, str] = dataclasses.field(default_factory=dict)
 
@@ -68,3 +72,15 @@ class BackendSchema:
             https_proxy = os.environ.get("https_proxy")
             if https_proxy:
                 self.proxies["https"] = https_proxy
+
+        # Validate backend mode
+        if self.mode not in ("legacy", "openai"):
+            logger.warning(
+                f"Invalid backend mode '{self.mode}'. Defaulting to 'legacy'. "
+                "Valid modes are: 'legacy', 'openai'"
+            )
+            self.mode = "legacy"
+
+        logger.info(f"Backend mode: {self.mode}")
+        if self.mode == "openai":
+            logger.info(f"Using model: {self.model}")

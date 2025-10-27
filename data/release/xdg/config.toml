@@ -38,6 +38,10 @@ enabled = true
 endpoint = "https://cert.console.redhat.com/api/lightspeed/v1"
 # HTTP request timeout in seconds (increase for CPU inference)
 timeout = 30
+# Backend mode - "legacy" for the old API, "openai" for OpenAI-compatible APIs (like ramalama)
+mode = "legacy"
+# Model name to use (only for OpenAI-compatible mode)
+model = "llama3.2"
 # Define https proxy to route the request through it.
 # proxies = { http = "http://example-host:8002", https = "https://example-host:8002" }
 # The proxy also accepts `username:password@localhost:8002` as it's input
@@ -58,3 +62,21 @@ level = "INFO"
 [logging.audit]
 # If enabled, we will log audit tracing to journald.
 enabled = false
+
+# MCP (Model Context Protocol) settings
+[mcp]
+# Enable MCP support to allow the LLM to use external tools
+enabled = false
+
+# Example MCP server configurations
+# Uncomment and modify to enable MCP servers:
+# [[mcp.servers]]
+# name = "filesystem"
+# command = "npx"
+# args = ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+#
+# [[mcp.servers]]
+# name = "brave-search"
+# command = "npx"
+# args = ["-y", "@modelcontextprotocol/server-brave-search"]
+# env = { BRAVE_API_KEY = "your-api-key-here" }
